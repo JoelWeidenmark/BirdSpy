@@ -4,8 +4,8 @@ FROM python:3.11
 # Install required packages while keeping the image small
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Copy the bird-analyzer folder into the container
-COPY ./bird-analyzer /app/bird-analyzer
+# Copy the current directory (bird-analyzer) into the container
+COPY . /app/bird-analyzer
 
 # Set working directory to the bird-analyzer folder
 WORKDIR /app/bird-analyzer

@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./bird-analyzer
+    container_name: birdnet-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./bird-analyzer:/app/bird-analyzer
+    working_dir: /app/bird-analyzer
+    command: python3 -m birdnet_analyzer.network.server --host 0.0.0.0 --port 5000
+
+  frontend:
+    build:
+      context: ./birdspy-app
+      target: development
+    container_name: birdnet-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./birdspy-app:/app
+      - /app/node_modules
+    working_dir: /app
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:5000
+    depends_on:
+      - backend
