@@ -4,13 +4,16 @@ services:
   backend:
     build:
       context: ./bird-analyzer
+      dockerfile: Dockerfile
     container_name: birdnet-backend
     ports:
-      - "5000:5000"
+      - "8080:8080"
     volumes:
-      - ./bird-analyzer:/app/bird-analyzer
-    working_dir: /app/bird-analyzer
-    command: python3 -m birdnet_analyzer.network.server --host 0.0.0.0 --port 5000
+      - ./bird-analyzer/uploads:/uploads
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - MPLBACKEND=Agg
+    restart: unless-stopped
 
   frontend:
     build:
@@ -24,6 +27,6 @@ services:
       - /app/node_modules
     working_dir: /app
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:5000
+      - NEXT_PUBLIC_API_URL=http://backend:8080
     depends_on:
       - backend

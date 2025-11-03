@@ -46,6 +46,11 @@ def run(output_path, lat, lon, week, threshold, sortby):
     Returns:
         None
     """
+    cfg.MODEL_PATH = cfg.BIRDNET_MODEL_PATH
+    cfg.LABELS_FILE = cfg.BIRDNET_LABELS_FILE
+    cfg.SAMPLE_RATE = cfg.BIRDNET_SAMPLE_RATE
+    cfg.SIG_LENGTH = cfg.BIRDNET_SIG_LENGTH
+
     # Load eBird codes, labels
     cfg.LABELS = utils.read_lines(cfg.LABELS_FILE)
 
@@ -70,5 +75,4 @@ def run(output_path, lat, lon, week, threshold, sortby):
 
     # Save species list
     with open(cfg.OUTPUT_PATH, "w") as f:
-        for s in species_list:
-            f.write(s + "\n")
+        f.writelines(s + "\n" for s in species_list)

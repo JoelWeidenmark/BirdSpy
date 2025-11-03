@@ -11,7 +11,8 @@ from datetime import date, datetime
 import bottle
 
 import birdnet_analyzer.config as cfg
-from birdnet_analyzer import analyze, species, utils
+from birdnet_analyzer import species, utils
+from birdnet_analyzer.analyze import utils as analyze_utils
 
 
 def result_pooling(lines: list[str], num_results=5, pmode="avg"):
@@ -101,8 +102,9 @@ def handle_request():
                 file_path = os.path.join(save_path, name + ext)
             else:
                 save_path = ""
-                file_path_tmp = tempfile.mkstemp(suffix=ext.lower(), dir=cfg.OUTPUT_PATH)
-                file_path = file_path_tmp.name
+                file_path_tmp_fd, file_path_tmp = tempfile.mkstemp(suffix=ext.lower(), dir=cfg.OUTPUT_PATH)
+                os.close(file_path_tmp_fd)  # Close the file descriptor
+                file_path = file_path_tmp
 
             upload.save(file_path, overwrite=True)
         else:
@@ -110,7 +112,7 @@ def handle_request():
 
     except Exception as ex:
         if file_path_tmp:
-            os.unlink(file_path_tmp.name)
+            os.unlink(file_path_tmp)
 
         # Write error log
         print(f"Error: Cannot save file {file_path}.", flush=True)
@@ -145,7 +147,7 @@ def handle_request():
             cfg.SPECIES_LIST = []
 
         # Analyze file
-        success = analyze.analyze_file((file_path, cfg.get_config()))
+        success = analyze_utils.analyze_file((file_path, cfg.get_config()))
 
         # Parse results
         if success:
@@ -187,4 +189,5 @@ def handle_request():
         return json.dumps(data)
     finally:
         if file_path_tmp:
-            os.unlink(file_path_tmp.name)
+            os.unlink(file_path_tmp)
+

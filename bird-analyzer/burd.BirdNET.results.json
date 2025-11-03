@@ -1,0 +1,25 @@
+{
+    "msg": "success",
+    "results": [
+        [
+            "Eleoscytalopus indigoticus_White-breasted Tapaculo",
+            0.18954
+        ],
+        [
+            "Streptopelia decaocto_Eurasian Collared-Dove",
+            0.18561999999999998
+        ],
+        [
+            "Sylvia atricapilla_Eurasian Blackcap",
+            0.12530000000000002
+        ],
+        [
+            "Siren_Siren",
+            0.05044
+        ],
+        [
+            "Zenaida macroura_Mourning Dove",
+            0.0412
+        ]
+    ]
+}

@@ -182,6 +182,9 @@ BirdNET_analysis_params.csv
 # Build files
 entitlements.plist
 
+# BirdSpy uploads directory (keep structure, ignore files)
+bird-analyzer/uploads/*
+!bird-analyzer/uploads/.gitkeep
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 

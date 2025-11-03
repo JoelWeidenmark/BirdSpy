@@ -35,7 +35,7 @@ def get_query_embedding(queryfile_path):
     # Load audio
     sig, rate = audio.open_audio_file(
         queryfile_path,
-        duration=cfg.SIG_LENGTH * cfg.AUDIO_SPEED if cfg.SAMPLE_CROP_MODE == "first" else None,
+        duration=cfg.BIRDNET_SIG_LENGTH * cfg.AUDIO_SPEED if cfg.SAMPLE_CROP_MODE == "first" else None,
         fmin=cfg.BANDPASS_FMIN,
         fmax=cfg.BANDPASS_FMAX,
         speed=cfg.AUDIO_SPEED,
@@ -43,16 +43,13 @@ def get_query_embedding(queryfile_path):
 
     # Crop query audio
     if cfg.SAMPLE_CROP_MODE == "center":
-        sig_splits = [audio.crop_center(sig, rate, cfg.SIG_LENGTH)]
+        sig_splits = [audio.crop_center(sig, rate, cfg.BIRDNET_SIG_LENGTH)]
     elif cfg.SAMPLE_CROP_MODE == "first":
-        sig_splits = [audio.split_signal(sig, rate, cfg.SIG_LENGTH, cfg.SIG_OVERLAP, cfg.SIG_MINLEN)[0]]
+        sig_splits = [audio.split_signal(sig, rate, cfg.BIRDNET_SIG_LENGTH, cfg.SIG_OVERLAP, cfg.SIG_MINLEN)[0]]
     else:
-        sig_splits = audio.split_signal(sig, rate, cfg.SIG_LENGTH, cfg.SIG_OVERLAP, cfg.SIG_MINLEN)
+        sig_splits = audio.split_signal(sig, rate, cfg.BIRDNET_SIG_LENGTH, cfg.SIG_OVERLAP, cfg.SIG_MINLEN)
 
-    samples = sig_splits
-    data = np.array(samples, dtype="float32")
-
-    return model.embeddings(data)
+    return model.embeddings(sig_splits)
 
 
 def get_search_results(

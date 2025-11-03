@@ -53,14 +53,16 @@ def _save_result(data, fpath):
     """
     # Make directory
     dir_path = os.path.dirname(fpath)
-    os.makedirs(dir_path, exist_ok=True)
+    if dir_path:  # Only create directory if there is a directory component
+        os.makedirs(dir_path, exist_ok=True)
 
     # Save result
     with open(fpath, "w") as f:
         json.dump(data, f, indent=4)
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the client command-line interface."""
     from birdnet_analyzer import cli
 
     # Freeze support for executable
@@ -87,9 +89,13 @@ if __name__ == "__main__":
     }
 
     # Send request
-    data = send_request(args.host, args.port, args.input, json.dumps(mdata))
+    data = send_request(args.host, args.port, args.audio_input, json.dumps(mdata))
 
     # Save result
-    fpath = args.output if args.output else args.i.rsplit(".", 1)[0] + ".BirdNET.results.json"
+    fpath = args.output if args.output else args.audio_input.rsplit(".", 1)[0] + ".BirdNET.results.json"
 
     _save_result(data, fpath)
+
+
+if __name__ == "__main__":
+    main()

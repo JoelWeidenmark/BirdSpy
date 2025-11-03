@@ -29,11 +29,7 @@ function init() {
                 .then(response => {
                     const current_version = document.getElementById("current-version").textContent;
                     const response_object = JSON.parse(response);
-                    const latest_version = response_object.tag_name;
-
-                    if (latest_version.startsWith("v")) {
-                        latest_version = latest_version.slice(1);
-                    }
+                    const latest_version = response_object.tag_name.replace(/^v/, '');
 
                     if (current_version !== latest_version) {
                         const updateNotification = document.getElementById("update-available");
@@ -58,17 +54,16 @@ function init() {
     }
 
     function bindReviewKeyShortcuts() {
-        const posBtn = document.getElementById("positive-button");
-        const negBtn = document.getElementById("negative-button");
-        const skipBtn = document.getElementById("skip-button");
-        const undoBtn = document.getElementById("undo-button");
-
-        if (!posBtn || !negBtn) return;
-
         console.log("Binding review key shortcuts...");
 
         document.addEventListener("keydown", function (event) {
+            const posBtn = document.getElementById("positive-button");
+            const negBtn = document.getElementById("negative-button");
+            const skipBtn = document.getElementById("skip-button");
+            const undoBtn = document.getElementById("undo-button");
             const reviewTabBtn = document.getElementById("review-tab-button");
+
+            if (!posBtn || !negBtn) return;
 
             if (reviewTabBtn.ariaSelected === "false") return;
 

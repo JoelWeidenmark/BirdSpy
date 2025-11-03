@@ -1,18 +1,20 @@
 # Build from Python slim
 FROM python:3.11
 
+# Set working directory
+WORKDIR /app
+
 # Install required packages while keeping the image small
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg  && rm -rf /var/lib/apt/lists/*
 
-# Copy the current directory (bird-analyzer) into the container
-COPY . /app/bird-analyzer
+# Import all scripts
+COPY . /app/
 
-# Set working directory to the bird-analyzer folder
-WORKDIR /app/bird-analyzer
+# Install required Python packages (including server dependencies)
+RUN pip3 install --no-cache-dir -e /app[server]
 
-# Install required Python packages
-RUN pip3 install --no-cache-dir .
+# Download BirdNET model during build
+RUN python3 -c "from birdnet_analyzer.utils import ensure_model_exists; ensure_model_exists()"
 
-# Add entry point to run the script
-ENTRYPOINT [ "python3" ]
-CMD [ "-m", "birdnet_analyzer.analyze" ]
+# Default command (can be overridden in docker-compose)
+CMD ["birdnet-server", "--host", "0.0.0.0", "--port", "8080"]

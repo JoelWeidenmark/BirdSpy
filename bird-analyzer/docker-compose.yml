@@ -1,0 +1,13 @@
+services:
+  birdnet-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./uploads:/uploads
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - MPLBACKEND=Agg
+    restart: unless-stopped

@@ -339,6 +339,7 @@ def build_evaluation_tab():
         labels_state = gr.State()
         annotation_files_state = gr.State()
         prediction_files_state = gr.State()
+        plot_name_state = gr.State()
 
         def get_selection_tables(directory):
             from pathlib import Path
@@ -378,7 +379,7 @@ def build_evaluation_tab():
 
                 if folder:
                     files = get_selection_tables(folder)
-                    files_to_display = files[:100] + [["..."]] if len(files) > 100 else files
+                    files_to_display = [*files[:100], ["..."]] if len(files) > 100 else files
                     return [files, files_to_display, gr.update(visible=True), *on_select(files)]
 
                 return ["", [[loc.localize("eval-tab-no-files-found")]]]
@@ -452,6 +453,7 @@ def build_evaluation_tab():
                     info=loc.localize("eval-tab-select-classes-checkboxgroup-info"),
                     interactive=True,
                     elem_classes="custom-checkbox-group",
+                    show_select_all=True,
                 )
 
             with gr.Column():
@@ -462,6 +464,7 @@ def build_evaluation_tab():
                     info=loc.localize("eval-tab-select-recordings-checkboxgroup-info"),
                     interactive=True,
                     elem_classes="custom-checkbox-group",
+                    show_select_all=True,
                 )
 
         # ----------------------- Parameters Box -----------------------
@@ -530,7 +533,10 @@ def build_evaluation_tab():
         )
         download_data_button.click(fn=download_data_table, inputs=[processor_state])
         metric_table = gr.Dataframe(show_label=False, type="pandas", visible=False, interactive=False)
-        plot_output = gr.Plot(visible=False, show_label=False)
+
+        with gr.Group(visible=False) as plot_group:
+            plot_output = gr.Plot(show_label=False)
+            plot_output_dl_btn = gr.Button("Download plot", size="sm")
 
         # Update available selections (classes and recordings) and the processor state when files or mapping file change.
         # Also pass the current selection values so that user selections are preserved.
@@ -604,7 +610,7 @@ def build_evaluation_tab():
                 "average precision (ap)": "ap",
                 "auroc": "auroc",
             }
-            metrics = tuple([valid_metrics[m] for m in selected_metrics if m in valid_metrics])
+            metrics = tuple(valid_metrics[m] for m in selected_metrics if m in valid_metrics)
 
             # Fall back to available classes from processor state if none selected.
             if not selected_classes_list and proc_state and proc_state.processor:
@@ -717,14 +723,14 @@ def build_evaluation_tab():
                 fig = pa.plot_metrics(predictions, labels, per_class_metrics=class_wise_value)
                 plt.close(fig)
 
-                return gr.update(visible=True, value=fig)
+                return gr.update(visible=True), gr.update(value=fig), "metrics"
             except Exception as e:
                 raise gr.Error(f"{loc.localize('eval-tab-error-plotting-metrics')}: {e}") from e
 
         plot_metrics_button.click(
             plot_metrics,
             inputs=[pa_state, predictions_state, labels_state, class_wise],
-            outputs=[plot_output],
+            outputs=[plot_group, plot_output, plot_name_state],
         )
 
         def plot_confusion_matrix(pa: PerformanceAssessor, predictions, labels):
@@ -734,28 +740,28 @@ def build_evaluation_tab():
                 fig = pa.plot_confusion_matrix(predictions, labels)
                 plt.close(fig)
 
-                return gr.update(visible=True, value=fig)
+                return gr.update(visible=True), fig, "confusion_matrix"
             except Exception as e:
                 raise gr.Error(f"{loc.localize('eval-tab-error-plotting-confusion-matrix')}: {e}") from e
 
         plot_confusion_button.click(
             plot_confusion_matrix,
             inputs=[pa_state, predictions_state, labels_state],
-            outputs=[plot_output],
+            outputs=[plot_group, plot_output, plot_name_state],
         )
 
         annotation_select_directory_btn.click(
             get_selection_func("eval-annotations-dir", update_annotation_columns),
             outputs=[annotation_files_state, annotation_directory_input, annotation_group]
             + [annotation_columns[label] for label in ["Start Time", "End Time", "Class", "Recording", "Duration"]],
-            show_progress=True,
+            show_progress="full",
         )
 
         prediction_select_directory_btn.click(
             get_selection_func("eval-predictions-dir", update_prediction_columns),
             outputs=[prediction_files_state, prediction_directory_input, prediction_group]
             + [prediction_columns[label] for label in ["Start Time", "End Time", "Class", "Confidence", "Recording", "Duration"]],
-            show_progress=True,
+            show_progress="full",
         )
 
         def toggle_after_selection(annotation_files, prediction_files):
@@ -780,15 +786,17 @@ def build_evaluation_tab():
                 fig = pa.plot_metrics_all_thresholds(predictions, labels, per_class_metrics=class_wise_value)
                 plt.close(fig)
 
-                return gr.update(visible=True, value=fig)
+                return gr.update(visible=True), gr.update(value=fig), "metrics_all_thresholds"
             except Exception as e:
                 raise gr.Error(f"{loc.localize('eval-tab-error-plotting-metrics-all-thresholds')}: {e}") from e
 
         plot_metrics_all_thresholds_button.click(
             plot_metrics_all_thresholds,
             inputs=[pa_state, predictions_state, labels_state, class_wise],
-            outputs=[plot_output],
+            outputs=[plot_group, plot_output, plot_name_state],
         )
+
+        plot_output_dl_btn.click(gu.download_plot, inputs=[plot_output, plot_name_state])
 
 
 if __name__ == "__main__":

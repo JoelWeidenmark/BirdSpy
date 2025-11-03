@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "birdnet_analyzer"
-version = "2.0.1"
+version = "2.3.0"
 license = { text = "MIT" }
 description = "BirdNET analyzer for scientific audio data processing and bird classification."
 authors = [{ name = "Stefan Kahl" }]
@@ -13,7 +13,9 @@ keywords = ["birdnet", "birdnet-analyzer"]
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
     "Topic :: Multimedia :: Sound/Audio :: Analysis",
     "Topic :: Scientific/Engineering",
@@ -21,14 +23,14 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "librosa",
+    "librosa>=0.11",
     "resampy",
-    "tensorflow==2.15.1",
-    "scikit-learn==1.6.1",
+    "tensorflow>=2.20;platform_system!='Darwin'",
+    "tensorflow==2.19;platform_system=='Darwin'", # https://github.com/apache/arrow/issues/40088 - until fixed
     "tqdm",
     "pandas",
     "matplotlib",
-    "seaborn"
+    "kagglehub",
 ]
 
 [project.optional-dependencies]
@@ -36,17 +38,18 @@ train = ["keras-tuner"]
 server = ["bottle", "requests"]
 gui = [
     "birdnet-analyzer[train,embeddings]",
-    "gradio==5.25.2",
-    "pywebview",
+    "gradio>=5.46",
+    "pywebview>=6.0",
+    "pyobjc-framework-UniformTypeIdentifiers;platform_system=='Darwin'", # macOS only, until pywebview adds it as dependency
     "plotly[express]",
     "pywin32;platform_system=='Windows'",
     "qtpy;platform_system=='Linux'",
     "PyGObject;platform_system=='Linux'",
 ]
-embeddings = ["perch-hoplite"]
+embeddings = ["perch-hoplite>=0.1.1"]
 all = ["birdnet-analyzer[server,gui]"]
 docs = ["sphinx", "sphinx-rtd-theme", "sphinx-argparse"]
-tests = ["pytest"]
+tests = ["pytest", "pytest-timeout", "pytest-order"]
 dev = ["birdnet_analyzer[tests]", "birdnet_analyzer[docs]", "ruff"]
 
 [project.scripts]
@@ -57,6 +60,8 @@ birdnet-search = "birdnet_analyzer.search.cli:main"
 birdnet-train = "birdnet_analyzer.train.cli:main"
 birdnet-segments = "birdnet_analyzer.segments.cli:main"
 birdnet-species = "birdnet_analyzer.species.cli:main"
+birdnet-server = "birdnet_analyzer.network.server:main"
+birdnet-client = "birdnet_analyzer.network.client:main"
 
 [project.gui-scripts]
 birdnet-gui = "birdnet_analyzer.gui.__init__:main"
@@ -78,6 +83,7 @@ packages = [
     "birdnet_analyzer.species",
     "birdnet_analyzer.segments",
     "birdnet_analyzer.train",
+    "birdnet_analyzer.network",
     "birdnet_analyzer.evaluation",
     "birdnet_analyzer.evaluation.preprocessing",
     "birdnet_analyzer.evaluation.assessment",
@@ -94,6 +100,11 @@ birdnet_analyzer = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["birdnet_analyzer"]
+timeout = 120
+filterwarnings = [
+    "ignore::DeprecationWarning:audioread.*",
+    "ignore::UserWarning:sklearn.*",
+]
 
 [tool.ruff]
 exclude = ["conf.py"]
@@ -136,7 +147,6 @@ ignore = [
     "B008",
     "TD003",
     "TD002",
-    "PD901",
     "SIM108",
     "E722",
     "PLR2004",
@@ -144,5 +154,6 @@ ignore = [
     "PLR0915",
     "PLR0912",
     "PLC0206",
+    "PLC0415",
     "RUF015",
 ]

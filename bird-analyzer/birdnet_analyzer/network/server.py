@@ -3,8 +3,12 @@ import shutil
 import tempfile
 from multiprocessing import freeze_support
 
+import bottle
+
 import birdnet_analyzer.config as cfg
 from birdnet_analyzer import cli, utils
+from birdnet_analyzer.analyze import utils as analyze_utils
+from birdnet_analyzer.network import utils as network_utils  # noqa: F401 - Import to register bottle routes
 
 
 def start_server(host="0.0.0.0", port=8080, spath="uploads/", threads=1, locale="en"):
@@ -25,20 +29,19 @@ def start_server(host="0.0.0.0", port=8080, spath="uploads/", threads=1, locale=
     Note:
         This function blocks execution while the server is running.
     """
-    import bottle
-
-    import birdnet_analyzer.analyze.utils as analyze
-
     utils.ensure_model_exists()
 
+    cfg.MODEL_PATH = cfg.BIRDNET_MODEL_PATH
+    cfg.LABELS_FILE = cfg.BIRDNET_LABELS_FILE
+    cfg.SAMPLE_RATE = cfg.BIRDNET_SAMPLE_RATE
+    cfg.SIG_LENGTH = cfg.BIRDNET_SIG_LENGTH
+
     # Load eBird codes, labels
-    cfg.CODES = analyze.load_codes()
+    cfg.CODES = analyze_utils.load_codes()
     cfg.LABELS = utils.read_lines(cfg.LABELS_FILE)
 
     # Load translated labels
-    lfile = os.path.join(
-        cfg.TRANSLATED_LABELS_PATH, os.path.basename(cfg.LABELS_FILE).replace(".txt", f"_{locale}.txt")
-    )
+    lfile = os.path.join(cfg.TRANSLATED_LABELS_PATH, os.path.basename(cfg.LABELS_FILE).replace(".txt", f"_{locale}.txt"))
 
     if locale not in ["en"] and os.path.isfile(lfile):
         cfg.TRANSLATED_LABELS = utils.read_lines(lfile)
@@ -64,12 +67,13 @@ def start_server(host="0.0.0.0", port=8080, spath="uploads/", threads=1, locale=
     print(f"UP AND RUNNING! LISTENING ON {host}:{port}", flush=True)
 
     try:
-        bottle.run(host=host, port=port, quiet=True)
+        bottle.run(app=bottle.default_app(), host=host, port=port, quiet=True)
     finally:
         shutil.rmtree(cfg.OUTPUT_PATH)
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the server command-line interface."""
     # Freeze support for executable
     freeze_support()
 
@@ -79,3 +83,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     start_server(**vars(args))
+
+
+if __name__ == "__main__":
+    main()

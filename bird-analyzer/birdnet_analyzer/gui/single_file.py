@@ -7,6 +7,8 @@ import birdnet_analyzer.gui.localization as loc
 import birdnet_analyzer.gui.utils as gu
 from birdnet_analyzer import audio, utils
 
+MATPLOTLIB_FIGURE_NUM = "single-file-tab-spectrogram-plot"
+
 
 @gu.gui_runtime_error_handler
 def run_single_file_analysis(
@@ -27,6 +29,7 @@ def run_single_file_analysis(
     week,
     use_yearlong,
     sf_thresh,
+    selected_model,
     custom_classifier_file,
     locale,
 ):
@@ -44,32 +47,33 @@ def run_single_file_analysis(
         raise gr.Error(f"{loc.localize('validation-no-valid-frequency')} [{cfg.SIG_FMIN}, {cfg.SIG_FMAX}]")
 
     result_filepath = run_analysis(
-        input_path,
-        None,
-        use_top_n,
-        top_n,
-        confidence,
-        sensitivity,
-        overlap,
-        merge_consecutive,
-        audio_speed,
-        fmin,
-        fmax,
-        species_list_choice,
-        species_list_file,
-        lat,
-        lon,
-        week,
-        use_yearlong,
-        sf_thresh,
-        custom_classifier_file,
-        "csv",
-        None,
-        False,
-        locale if locale else "en",
-        1,
-        4,
-        None,
+        input_path=input_path,
+        output_path=None,
+        use_top_n=use_top_n,
+        top_n=top_n,
+        confidence=confidence,
+        sensitivity=sensitivity,
+        overlap=overlap,
+        merge_consecutive=merge_consecutive,
+        audio_speed=audio_speed,
+        fmin=fmin,
+        fmax=fmax,
+        species_list_choice=species_list_choice,
+        species_list_file=species_list_file,
+        lat=lat,
+        lon=lon,
+        week=week,
+        use_yearlong=use_yearlong,
+        sf_thresh=sf_thresh,
+        selected_model=selected_model,
+        custom_classifier_file=custom_classifier_file,
+        output_types="csv",
+        additional_columns=None,
+        combine_tables=False,
+        locale=locale if locale else "en",
+        batch_size=1,
+        threads=4,
+        input_dir=None,
         skip_existing=False,
         save_params=False,
         progress=None,
@@ -103,9 +107,7 @@ def build_single_analysis_tab():
         audio_input = gr.Audio(type="filepath", label=loc.localize("single-audio-label"), sources=["upload"])
 
         with gr.Group():
-            spectogram_output = gr.Plot(
-                label=loc.localize("review-tab-spectrogram-plot-label"), visible=False, show_label=False
-            )
+            spectogram_output = gr.Plot(label=loc.localize("review-tab-spectrogram-plot-label"), visible=False, show_label=False)
             generate_spectrogram_cb = gr.Checkbox(
                 value=True,
                 label=loc.localize("single-tab-spectrogram-checkbox-label"),
@@ -113,43 +115,16 @@ def build_single_analysis_tab():
             )
         audio_path_state = gr.State()
         table_path_state = gr.State()
-
-        (
-            use_top_n,
-            top_n_input,
-            confidence_slider,
-            sensitivity_slider,
-            overlap_slider,
-            merge_consecutive_slider,
-            audio_speed_slider,
-            fmin_number,
-            fmax_number,
-        ) = gu.sample_sliders(False)
-
-        (
-            species_list_radio,
-            species_file_input,
-            lat_number,
-            lon_number,
-            week_number,
-            sf_thresh_number,
-            yearlong_checkbox,
-            selected_classifier_state,
-            map_plot,
-        ) = gu.species_lists(False)
+        sample_settings, species_settings, model_settings = gu.sample_species_model_settings(opened=False)
         locale_radio = gu.locale()
 
-        single_file_analyze = gr.Button(
-            loc.localize("analyze-start-button-label"), variant="huggingface", interactive=False
-        )
+        single_file_analyze = gr.Button(loc.localize("analyze-start-button-label"), variant="huggingface", interactive=False)
 
         with gr.Row(visible=False) as action_row:
             table_download_button = gr.Button(
                 loc.localize("single-tab-download-button-label"),
             )
-            segment_audio = gr.Audio(
-                autoplay=True, type="numpy", show_download_button=True, show_label=False, editable=False, visible=False
-            )
+            segment_audio = gr.Audio(autoplay=True, type="numpy", show_download_button=True, show_label=False, editable=False, visible=False)
 
         output_dataframe = gr.Dataframe(
             type="pandas",
@@ -171,7 +146,7 @@ def build_single_analysis_tab():
                     return (
                         i["path"],
                         gr.Audio(label=os.path.basename(i["path"])),
-                        gr.Plot(visible=True, value=utils.spectrogram_from_file(i["path"], fig_size=(20, 4)))
+                        gr.Plot(visible=True, value=utils.spectrogram_from_file(i["path"], fig_size=(20, 4), fig_num=MATPLOTLIB_FIGURE_NUM))
                         if generate_spectrogram
                         else gr.Plot(visible=False),
                         gr.Button(interactive=True),
@@ -184,9 +159,7 @@ def build_single_analysis_tab():
         def try_generate_spectrogram(audio_path, generate_spectrogram):
             if audio_path and generate_spectrogram:
                 try:
-                    return gr.Plot(
-                        visible=True, value=utils.spectrogram_from_file(audio_path["path"], fig_size=(20, 4))
-                    )
+                    return gr.Plot(visible=True, value=utils.spectrogram_from_file(audio_path["path"], fig_size=(20, 4), fig_num=MATPLOTLIB_FIGURE_NUM))
                 except Exception as e:
                     raise gr.Error(loc.localize("single-tab-generate-spectrogram-error")) from e
             else:
@@ -208,27 +181,28 @@ def build_single_analysis_tab():
 
         inputs = [
             audio_path_state,
-            use_top_n,
-            top_n_input,
-            confidence_slider,
-            sensitivity_slider,
-            overlap_slider,
-            merge_consecutive_slider,
-            audio_speed_slider,
-            fmin_number,
-            fmax_number,
-            species_list_radio,
-            species_file_input,
-            lat_number,
-            lon_number,
-            week_number,
-            yearlong_checkbox,
-            sf_thresh_number,
-            selected_classifier_state,
+            sample_settings["use_top_n_checkbox"],
+            sample_settings["top_n_input"],
+            sample_settings["confidence_slider"],
+            sample_settings["sensitivity_slider"],
+            sample_settings["overlap_slider"],
+            sample_settings["merge_consecutive_slider"],
+            sample_settings["audio_speed_slider"],
+            sample_settings["fmin_number"],
+            sample_settings["fmax_number"],
+            species_settings["species_list_radio"],
+            species_settings["species_file_input"],
+            species_settings["lat_number"],
+            species_settings["lon_number"],
+            species_settings["week_number"],
+            species_settings["yearlong_checkbox"],
+            species_settings["sf_thresh_number"],
+            model_settings["model_selection_radio"],
+            model_settings["selected_classifier_state"],
             locale_radio,
         ]
 
-        def time_to_seconds(time_str):
+        def time_to_seconds(time_str: str):
             try:
                 hours, minutes, seconds = time_str.split(":")
                 return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
@@ -260,12 +234,10 @@ def build_single_analysis_tab():
                         dst.write(src.read())
 
         output_dataframe.select(get_selected_audio, inputs=audio_path_state, outputs=segment_audio)
-        single_file_analyze.click(
-            run_single_file_analysis, inputs=inputs, outputs=[output_dataframe, action_row, table_path_state]
-        )
+        single_file_analyze.click(run_single_file_analysis, inputs=inputs, outputs=[output_dataframe, action_row, table_path_state])
         table_download_button.click(download_table, inputs=table_path_state)
 
-    return lat_number, lon_number, map_plot
+    return species_settings["lat_number"], species_settings["lon_number"], species_settings["map_plot"]
 
 
 if __name__ == "__main__":
